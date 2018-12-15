@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.Writer;
 
 public class AttestationActivity extends AppCompatActivity {
+    public static String PACKAGE_NAME;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,13 +33,14 @@ public class AttestationActivity extends AppCompatActivity {
         });
 
         ((TextView) findViewById(R.id.textview)).setMovementMethod(new ScrollingMovementMethod());
+        PACKAGE_NAME = getApplicationContext().getPackageName();
     }
 
     private void doIt() {
         TextView textView = (TextView) findViewById(R.id.textview);
         textView.setText("");
         try {
-            new AttestationTest(textView).execute();
+            new AttestationTest(textView, PACKAGE_NAME).execute();
         } catch (Exception e) {
             e.printStackTrace();
         }
