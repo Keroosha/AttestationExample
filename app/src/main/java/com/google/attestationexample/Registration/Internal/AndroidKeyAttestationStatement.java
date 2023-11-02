@@ -1,4 +1,4 @@
-package com.google.attestationexample.Internal;
+package com.google.attestationexample.Registration.Internal;
 
 import com.upokecenter.cbor.CBOREncodeOptions;
 import com.upokecenter.cbor.CBORObject;

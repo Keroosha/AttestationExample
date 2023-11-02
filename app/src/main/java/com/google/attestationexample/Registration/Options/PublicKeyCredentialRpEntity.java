@@ -1,4 +1,4 @@
-package com.google.attestationexample.Options;
+package com.google.attestationexample.Registration.Options;
 
 public class PublicKeyCredentialRpEntity {
     public String id;

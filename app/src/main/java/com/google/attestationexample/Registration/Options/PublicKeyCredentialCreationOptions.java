@@ -1,4 +1,4 @@
-package com.google.attestationexample.Options;
+package com.google.attestationexample.Registration.Options;
 
 import java.util.ArrayList;
 

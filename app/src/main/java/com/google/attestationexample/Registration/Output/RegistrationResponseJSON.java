@@ -1,4 +1,4 @@
-package com.google.attestationexample.Output;
+package com.google.attestationexample.Registration.Output;
 
 public class RegistrationResponseJSON {
     public String id;

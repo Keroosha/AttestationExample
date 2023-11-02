@@ -1,4 +1,4 @@
-package com.google.attestationexample;
+package com.google.attestationexample.Registration;
 
 import android.os.AsyncTask;
 import android.security.keystore.KeyGenParameterSpec;
@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.UUID;
-import java.util.Calendar;
 import java.security.MessageDigest;
 
 import javax.security.auth.x500.X500Principal;
@@ -35,20 +34,21 @@ import javax.security.auth.x500.X500Principal;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.attestationexample.Internal.AndroidKeyAttestationStatement;
-import com.google.attestationexample.Internal.AttestationObject;
-import com.google.attestationexample.Internal.AttestedCredentialData;
-import com.google.attestationexample.Internal.AuthenticatorData;
-import com.google.attestationexample.Internal.CredentialPublicKeyEcdsa;
-import com.google.attestationexample.Options.AuthenticatorSelectionCriteria;
-import com.google.attestationexample.Options.PublicKeyCredentialCreationOptions;
-import com.google.attestationexample.Options.PublicKeyCredentialParameters;
-import com.google.attestationexample.Options.PublicKeyCredentialRpEntity;
-import com.google.attestationexample.Options.PublicKeyCredentialUserEntity;
+import com.google.attestationexample.Constants;
+import com.google.attestationexample.Registration.Internal.AndroidKeyAttestationStatement;
+import com.google.attestationexample.Registration.Internal.AttestationObject;
+import com.google.attestationexample.Registration.Internal.AttestedCredentialData;
+import com.google.attestationexample.Registration.Internal.AuthenticatorData;
+import com.google.attestationexample.Registration.Internal.CredentialPublicKeyEcdsa;
+import com.google.attestationexample.Registration.Options.AuthenticatorSelectionCriteria;
+import com.google.attestationexample.Registration.Options.PublicKeyCredentialCreationOptions;
+import com.google.attestationexample.Registration.Options.PublicKeyCredentialParameters;
+import com.google.attestationexample.Registration.Options.PublicKeyCredentialRpEntity;
+import com.google.attestationexample.Registration.Options.PublicKeyCredentialUserEntity;
 import com.google.attestationexample.Constants.CoseAlg;
-import com.google.attestationexample.Internal.ClientData;
-import com.google.attestationexample.Output.AuthenticatorAttestationResponseJSON;
-import com.google.attestationexample.Output.RegistrationResponseJSON;
+import com.google.attestationexample.Registration.Internal.ClientData;
+import com.google.attestationexample.Registration.Output.AuthenticatorAttestationResponseJSON;
+import com.google.attestationexample.Registration.Output.RegistrationResponseJSON;
 
 /**
  * AttestationTest generates an EC Key pair, with attestation, and displays the result in the
@@ -56,11 +56,11 @@ import com.google.attestationexample.Output.RegistrationResponseJSON;
  */
 public class AttestationTest extends AsyncTask<Void, String, Void> {
     private final TextView view;
-    public static String PACKAGE_NAME;
+    private final String packageName;
 
-    AttestationTest(TextView view, String PACKAGE_NAME) {
+    public AttestationTest(TextView view, String packageName) {
         this.view = view;
-        AttestationTest.PACKAGE_NAME = PACKAGE_NAME;
+        this.packageName = packageName;
     }
 
     @Override
@@ -88,7 +88,7 @@ public class AttestationTest extends AsyncTask<Void, String, Void> {
         byte[] clientDataJson = ClientDataToJson(typedClientData);
         MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
         byte[] clientDataHash = sha256.digest(clientDataJson);
-        String keyUUID = UUID.fromString("98f677be-0107-4384-a30c-8732b9d1b8b4").toString();
+        String keyUUID = UUID.fromString(Constants.keyUUID).toString();
         KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
         keyStore.load(null);
         keyStore.deleteEntry(keyUUID);
@@ -205,7 +205,7 @@ public class AttestationTest extends AsyncTask<Void, String, Void> {
         return result;
     }
 
-    private static KeyPair GenerateKey(String keyUUID, byte[] clientData) throws NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException {
+    private KeyPair GenerateKey(String keyUUID, byte[] clientData) throws NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException {
 
         String keyUUIDString = keyUUID;
         MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
@@ -218,7 +218,7 @@ public class AttestationTest extends AsyncTask<Void, String, Void> {
         KeyGenParameterSpec spec = new KeyGenParameterSpec.Builder(keyUUIDString, KeyProperties.PURPOSE_SIGN)
                 .setDigests(KeyProperties.DIGEST_SHA256)
                 .setAlgorithmParameterSpec(new ECGenParameterSpec("prime256v1"))
-                .setCertificateSubject(new X500Principal(String.format("CN=%s, OU=%s", keyUUID, PACKAGE_NAME)))
+                .setCertificateSubject(new X500Principal(String.format("CN=%s, OU=%s", keyUUID, this.packageName)))
                 .setCertificateSerialNumber(BigInteger.ONE)
                 .setCertificateNotBefore(notBefore)
                 .setCertificateNotAfter(notAfter)
@@ -250,7 +250,7 @@ public class AttestationTest extends AsyncTask<Void, String, Void> {
         PublicKeyCredentialCreationOptions result = new PublicKeyCredentialCreationOptions();
         result.rp = GenerateOptionsRp();
         result.user = GenerateOptionsUser();
-        result.challenge = base64UrlEncode(hexStringToByteArray("F234917AD286DF19DE11A8C47DE77FBE611BF54EDB5D9DB2AC172FCAD963F9C2"));
+        result.challenge = base64UrlEncode(Constants.AttestationChallenge);
         result.pubKeyCredParams = GenerateOptionsPubKeyCredParams();
         result.timeout = 60000;
         result.attestation = "direct";
@@ -260,7 +260,7 @@ public class AttestationTest extends AsyncTask<Void, String, Void> {
 
     private static PublicKeyCredentialRpEntity GenerateOptionsRp() {
         PublicKeyCredentialRpEntity rp = new PublicKeyCredentialRpEntity();
-        rp.id = "vanbukin-pc.local";
+        rp.id = Constants.rpId;
         rp.name = "Test Host";
         return rp;
     }
@@ -304,16 +304,6 @@ public class AttestationTest extends AsyncTask<Void, String, Void> {
     }
 
     private final static char[] hexArray = "0123456789ABCDEF".toCharArray();
-
-    public static String bytesToHex(byte[] bytes) {
-        char[] hexChars = new char[bytes.length * 2];
-        for (int j = 0; j < bytes.length; j++) {
-            int v = bytes[j] & 0xFF;
-            hexChars[j * 2] = hexArray[v >>> 4];
-            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
-        }
-        return new String(hexChars);
-    }
 
     private static String base64UrlEncode(byte[] input) throws UnsupportedEncodingException {
         String result = new String(Base64.encode(input, Base64.URL_SAFE | Base64.NO_PADDING | Base64.NO_CLOSE | Base64.NO_WRAP), StandardCharsets.UTF_8).trim();

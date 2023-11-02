@@ -5,17 +5,15 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.method.ScrollingMovementMethod;
 import android.view.View;
 import android.view.Menu;
-import android.view.MenuItem;
 import android.widget.TextView;
 
-import java.io.IOException;
-import java.io.Writer;
+import com.google.attestationexample.Authentication.AssertionTest;
+import com.google.attestationexample.Registration.AttestationTest;
 
 public class AttestationActivity extends AppCompatActivity {
     public static String PACKAGE_NAME;
@@ -27,31 +25,31 @@ public class AttestationActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        FloatingActionButton attestationFab = (FloatingActionButton) findViewById(R.id.fabLoadAttestation);
+        FloatingActionButton assertionFab = (FloatingActionButton) findViewById(R.id.fabLoadAssertion);
         FloatingActionButton fabCopy = (FloatingActionButton) findViewById(R.id.fabCopy);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                createAndroidKeyResponse();
-            }
-        });
-
-        fabCopy.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                copy();
-            }
-        });
-
+        attestationFab.setOnClickListener(view -> createAttestationResponse());
+        assertionFab.setOnClickListener(view -> createAssertionResponse());
+        fabCopy.setOnClickListener(view -> copy());
         ((TextView) findViewById(R.id.textview)).setMovementMethod(new ScrollingMovementMethod());
         PACKAGE_NAME = getApplicationContext().getPackageName();
     }
 
-    private void createAndroidKeyResponse() {
+    private void createAttestationResponse() {
         TextView textView = (TextView) findViewById(R.id.textview);
         textView.setText("");
         try {
             new AttestationTest(textView, PACKAGE_NAME).execute();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void createAssertionResponse() {
+        TextView textView = (TextView) findViewById(R.id.textview);
+        textView.setText("");
+        try {
+            new AssertionTest(textView, PACKAGE_NAME).execute();
         } catch (Exception e) {
             e.printStackTrace();
         }

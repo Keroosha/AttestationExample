@@ -24,19 +24,35 @@
     <include layout="@layout/content_attestation" />
 
     <android.support.design.widget.FloatingActionButton
-        android:id="@+id/fab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|right"
-        android:layout_margin="@dimen/fab_margin"
-        app:srcCompat="@android:drawable/btn_star_big_on" />
-
-    <android.support.design.widget.FloatingActionButton
         android:id="@+id/fabCopy"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|left"
         android:layout_margin="@dimen/fab_margin"
         app:srcCompat="?attr/actionModeCopyDrawable" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="bottom"
+        android:orientation="vertical">
+
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/fabLoadAttestation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right"
+            android:layout_margin="@dimen/fab_margin"
+            app:srcCompat="@android:drawable/ic_lock_idle_lock" />
+
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/fabLoadAssertion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right"
+            android:layout_margin="@dimen/fab_margin"
+            app:srcCompat="@android:drawable/ic_media_play" />
+    </LinearLayout>
+
 
 </android.support.design.widget.CoordinatorLayout>

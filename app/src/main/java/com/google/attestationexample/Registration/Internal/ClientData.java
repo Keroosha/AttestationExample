@@ -1,4 +1,4 @@
-package com.google.attestationexample.Internal;
+package com.google.attestationexample.Registration.Internal;
 
 public class ClientData {
     public String type;
