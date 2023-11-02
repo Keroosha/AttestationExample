@@ -8,41 +8,47 @@ import android.widget.TextView;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.KeyPair;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
 import java.security.spec.ECGenParameterSpec;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.regex.Pattern;
+import java.util.Date;
+import java.util.UUID;
 import java.util.Calendar;
-
-import org.json.JSONArray;
-
 import java.security.MessageDigest;
 
 import javax.security.auth.x500.X500Principal;
 
-import static android.security.keystore.KeyProperties.KEY_ALGORITHM_EC;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.google.attestationexample.Internal.AndroidKeyAttestationStatement;
+import com.google.attestationexample.Internal.AttestationObject;
+import com.google.attestationexample.Internal.AttestedCredentialData;
+import com.google.attestationexample.Internal.AuthenticatorData;
+import com.google.attestationexample.Internal.CredentialPublicKeyEcdsa;
 import com.google.attestationexample.Options.AuthenticatorSelectionCriteria;
 import com.google.attestationexample.Options.PublicKeyCredentialCreationOptions;
 import com.google.attestationexample.Options.PublicKeyCredentialParameters;
 import com.google.attestationexample.Options.PublicKeyCredentialRpEntity;
 import com.google.attestationexample.Options.PublicKeyCredentialUserEntity;
-
-import com.google.attestationexample.Options.Constants.CoseAlg;
+import com.google.attestationexample.Constants.CoseAlg;
 import com.google.attestationexample.Internal.ClientData;
-
+import com.google.attestationexample.Output.AuthenticatorAttestationResponseJSON;
+import com.google.attestationexample.Output.RegistrationResponseJSON;
 
 /**
  * AttestationTest generates an EC Key pair, with attestation, and displays the result in the
@@ -54,13 +60,13 @@ public class AttestationTest extends AsyncTask<Void, String, Void> {
 
     AttestationTest(TextView view, String PACKAGE_NAME) {
         this.view = view;
-        this.PACKAGE_NAME = PACKAGE_NAME;
+        AttestationTest.PACKAGE_NAME = PACKAGE_NAME;
     }
 
     @Override
     protected Void doInBackground(Void... params) {
         try {
-            fidoSampleGenerator();
+            GenerateAndroidKeyAttestation();
         } catch (Exception e) {
             StringWriter s = new StringWriter();
             e.printStackTrace(new PrintWriter(s));
@@ -76,106 +82,175 @@ public class AttestationTest extends AsyncTask<Void, String, Void> {
         }
     }
 
-    private void fidoSampleGenerator() throws Exception {
-
+    private void GenerateAndroidKeyAttestation() throws Exception {
         PublicKeyCredentialCreationOptions options = GenerateOptions();
         ClientData typedClientData = OptionsToClientData(options);
-        String clientDataJson = ClientDataToJson(typedClientData);
-
-
-        String keystoreAlias = "fidoTestKey";
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-
-        byte[] authDataBase = hexStringToByteArray("9569088f1ecee3232954035dbd10d7cae391305a2751b559bb8fd7cbb229bdd4450000000028f37d2b92b841c4b02a860cef7cc034004101552f0265f6e35bcc29877b64176690d59a61c3588684990898c544699139be88e32810515987ea4f4833071b646780438bf858c36984e46e7708dee61eedcbd0");
-
+        byte[] clientDataJson = ClientDataToJson(typedClientData);
+        MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+        byte[] clientDataHash = sha256.digest(clientDataJson);
+        String keyUUID = UUID.fromString("98f677be-0107-4384-a30c-8732b9d1b8b4").toString();
         KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
         keyStore.load(null);
-
-        keyStore.deleteEntry(keystoreAlias);
-
-        byte[] clientData = this.hexStringToByteArray("7b2274797065223a22776562617574686e2e637265617465222c226368616c6c656e6765223a2254663635625336443574656d6832427776707471674250623235695a4452786a774335616e73393149494a447263724f706e57544b344c5667466a6555563447444d65343477385349354e735a737349585455764467222c226f726967696e223a2268747470733a5c2f5c2f776562617574686e2e6f7267222c22616e64726f69645061636b6167654e616d65223a22636f6d2e616e64726f69642e6368726f6d65227d");
-        byte[] clientDataHash = digest.digest(clientData);
-
-        Calendar notBefore = Calendar.getInstance();
-        Calendar notAfter = Calendar.getInstance();
-        notAfter.add(Calendar.YEAR, 10);
-
-        publishProgress("Generating key pair...");
-        KeyGenParameterSpec.Builder builder = new KeyGenParameterSpec.Builder(keystoreAlias, KeyProperties.PURPOSE_SIGN)
-                .setDigests(KeyProperties.DIGEST_SHA256)
-                .setAlgorithmParameterSpec(new ECGenParameterSpec("prime256v1"))
-                .setCertificateSubject(
-                        new X500Principal(String.format("CN=%s, OU=%s",
-                                keystoreAlias, PACKAGE_NAME)))
-                .setCertificateSerialNumber(BigInteger.ONE)
-                .setKeyValidityStart(notBefore.getTime())
-                .setKeyValidityEnd(notAfter.getTime())
-                .setUserAuthenticationRequired(true)
-                .setUserAuthenticationValidityDurationSeconds(30)
-                .setAttestationChallenge(clientDataHash);
-
-        KeyPair kp = makeNewKeyPair(KEY_ALGORITHM_EC, builder.build());
-        publishProgress("Key pair generated\n\n");
-
-        Certificate[] certarray = keyStore.getCertificateChain(keystoreAlias);
-
-        String certArray[] = new String[certarray.length];
-        int i = 0;
-        for (Certificate cert : certarray) {
-            byte[] buf = cert.getEncoded();
-            certArray[i] = new String(Base64.encode(buf, Base64.DEFAULT))
-                    .replace("\n", "");
-            i++;
-        }
-
-        JSONArray jarray = new JSONArray(certArray);
-        String key_attestation_data = jarray.toString();
-
+        keyStore.deleteEntry(keyUUID);
+        KeyPair keyPair = GenerateKey(keyUUID, clientDataJson);
+        byte[] credentialId = keyUUID.getBytes(StandardCharsets.UTF_8);
+        AuthenticatorData authenticatorData = GetAuthenticatorData(options.rp.id, credentialId, keyPair.getPublic());
+        byte[] authData = authenticatorData.toByteArray();
         Signature signer = Signature.getInstance("SHA256WithECDSA");
-
-
-        byte[] pubkeybuffer = kp.getPublic().getEncoded();
-        byte[] coeffx = Arrays.copyOfRange(pubkeybuffer, pubkeybuffer.length - 64, pubkeybuffer.length - 32);
-        byte[] coeffy = Arrays.copyOfRange(pubkeybuffer, pubkeybuffer.length - 32, pubkeybuffer.length);
-        byte[] cosepk = mergeByteArrays(hexStringToByteArray("a5010203262001215820"), coeffx, hexStringToByteArray("225820"), coeffy);
-
-        byte[] authData = mergeByteArrays(authDataBase, cosepk);
-        byte[] signaturebase = mergeByteArrays(authData, clientDataHash);
-
-        signer.initSign(kp.getPrivate());
-        signer.update(signaturebase);
+        byte[] dataToSign = mergeByteArrays(authData, clientDataHash);
+        signer.initSign(keyPair.getPrivate());
+        signer.update(dataToSign);
         byte[] signature = signer.sign();
-        publishProgress("\nauthData ", bytesToHex(authData));
-        System.out.println("\nauthData " + bytesToHex(authData));
-
-        publishProgress("\nsignature ", bytesToHex(signature));
-        System.out.println("\nsignature " + bytesToHex(signature));
-
-        publishProgress("\nFIDO CERTIFICATES ", key_attestation_data);
-        System.out.println("\nYOLOLOLOLO CERTIFICATES " + key_attestation_data);
-
-        publishProgress("\n\nSuccessfully generated signature\n");
+        AttestationObject attestationObject = CreateAttestationObject(keyStore, keyUUID, signature, authData);
+        RegistrationResponseJSON registrationResponse = CreateRegistrationResponse(credentialId, attestationObject.toByteArray(), clientDataJson);
+        String registrationResponseJson = RegistrationResponseToJson(registrationResponse);
+        publishProgress(registrationResponseJson);
+        System.out.println(registrationResponseJson);
     }
 
-    private static String ClientDataToJson(ClientData clientData) throws JsonProcessingException {
+    private static String RegistrationResponseToJson(RegistrationResponseJSON registrationResponse) throws JsonProcessingException {
+        ObjectWriter ow = new ObjectMapper().writer();
+        String json = ow.writeValueAsString(registrationResponse);
+        return json;
+    }
+
+    private static RegistrationResponseJSON CreateRegistrationResponse(byte[] credentialId, byte[] attestationObject, byte[] clientDataJSON) throws UnsupportedEncodingException {
+        RegistrationResponseJSON result = new RegistrationResponseJSON();
+        result.id = base64UrlEncode(credentialId);
+        result.rawId = base64UrlEncode(credentialId);
+        result.type = "public-key";
+        result.response = CreateAuthenticatorAttestationResponse(attestationObject, clientDataJSON);
+        return result;
+    }
+
+    private static AuthenticatorAttestationResponseJSON CreateAuthenticatorAttestationResponse(byte[] attestationObject, byte[] clientDataJSON) throws UnsupportedEncodingException {
+        AuthenticatorAttestationResponseJSON result = new AuthenticatorAttestationResponseJSON();
+        result.attestationObject = base64UrlEncode(attestationObject);
+        result.clientDataJSON = base64UrlEncode(clientDataJSON);
+        return result;
+    }
+
+    private static AttestationObject CreateAttestationObject(KeyStore keyStore, String keyUUID, byte[] signature, byte[] authData) throws CertificateEncodingException, KeyStoreException, NoSuchAlgorithmException {
+        AttestationObject result = new AttestationObject();
+        result.attStmt = CreateAttestationStatement(keyStore, keyUUID, signature);
+        result.authData = authData;
+        return result;
+    }
+
+    private static AndroidKeyAttestationStatement CreateAttestationStatement(KeyStore keyStore, String keyUUID, byte[] signature) throws CertificateEncodingException, KeyStoreException {
+        AndroidKeyAttestationStatement result = new AndroidKeyAttestationStatement();
+        result.X5C = GetEncodedAttestationCertificates(keyStore, keyUUID);
+        result.sig = signature;
+        result.alg = CoseAlg.ES256;
+        return result;
+    }
+
+    private static byte[][] GetEncodedAttestationCertificates(KeyStore keyStore, String keyUUID) throws KeyStoreException, CertificateEncodingException {
+        Certificate[] certs = keyStore.getCertificateChain(keyUUID);
+        byte[][] result = new byte[certs.length][];
+        for (int i = 0; i < certs.length; i++) {
+            byte[] encodedCert = certs[i].getEncoded();
+            result[i] = encodedCert;
+        }
+        return result;
+    }
+
+    private static AuthenticatorData GetAuthenticatorData(String rpId, byte[] credentialId, PublicKey publicKey) throws NoSuchAlgorithmException {
+        AuthenticatorData result = new AuthenticatorData();
+        MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+
+        result.rpIdHash = sha256.digest(rpId.getBytes(StandardCharsets.UTF_8));
+        byte flags = 0x00;
+        // Bit 0: User Present (UP) result.
+        // Bit 1: Reserved for future use (RFU1).
+        // Bit 2: User Verified (UV) result.
+        // Bit 3: Backup Eligibility (BE).
+        // Bit 4: Backup State (BS).
+        // Bit 5: Reserved for future use (RFU2).
+        // Bit 6: Attested credential data included (AT).
+        // Bit 7: Extension data included (ED).
+
+        byte FLAG_UP = 0x01; // Bit 0: User Present (UP) result.
+        byte FLAG_UV = 0x04; // Bit 2: User Verified (UV) result.
+        byte FLAG_BE = 0x08; // Bit 3: Backup Eligibility (BE).
+        byte FLAG_BS = 0x10; // Bit 4: Backup State (BS).
+        byte FLAG_AT = 0x40; // Bit 6: Attested credential data included (AT).
+        byte FLAG_ED = (byte) 0x80; // Extension data included (ED).
+
+        flags = (byte) (flags | FLAG_UP);
+        flags = (byte) (flags | FLAG_UV);
+        flags = (byte) (flags | FLAG_AT);
+
+        result.flags = flags;
+        result.signCount = 0x00;
+        result.attestedCredentialData = GetAttestedCredentialData(credentialId, publicKey);
+        return result;
+    }
+
+    private static AttestedCredentialData GetAttestedCredentialData(byte[] credentialId, PublicKey publicKey) {
+        AttestedCredentialData result = new AttestedCredentialData();
+        result.aaguid = new byte[]{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        result.credentialId = credentialId;
+        result.credentialPublicKey = GetCredentialPublicKey(publicKey);
+        return result;
+    }
+
+    private static CredentialPublicKeyEcdsa GetCredentialPublicKey(PublicKey publicKey) {
+        byte[] pubKeyBuffer = publicKey.getEncoded();
+        byte[] x = Arrays.copyOfRange(pubKeyBuffer, pubKeyBuffer.length - 64, pubKeyBuffer.length - 32);
+        byte[] y = Arrays.copyOfRange(pubKeyBuffer, pubKeyBuffer.length - 32, pubKeyBuffer.length);
+        CredentialPublicKeyEcdsa result = new CredentialPublicKeyEcdsa();
+        result.X = x;
+        result.Y = y;
+        return result;
+    }
+
+    private static KeyPair GenerateKey(String keyUUID, byte[] clientData) throws NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException {
+
+        String keyUUIDString = keyUUID;
+        MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+        byte[] clientDataHash = sha256.digest(clientData);
+
+        Date notBefore = new Date(1698931745000L);
+        Date notAfter = new Date(1698931775000L);
+
+        KeyPairGenerator kpGenerator = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore");
+        KeyGenParameterSpec spec = new KeyGenParameterSpec.Builder(keyUUIDString, KeyProperties.PURPOSE_SIGN)
+                .setDigests(KeyProperties.DIGEST_SHA256)
+                .setAlgorithmParameterSpec(new ECGenParameterSpec("prime256v1"))
+                .setCertificateSubject(new X500Principal(String.format("CN=%s, OU=%s", keyUUID, PACKAGE_NAME)))
+                .setCertificateSerialNumber(BigInteger.ONE)
+                .setCertificateNotBefore(notBefore)
+                .setCertificateNotAfter(notAfter)
+                .setUserAuthenticationRequired(true)
+                .setUserAuthenticationValidityDurationSeconds(86400)
+                .setAttestationChallenge(clientDataHash)
+                .build();
+        kpGenerator.initialize(spec);
+        KeyPair kp = kpGenerator.generateKeyPair();
+        return kp;
+    }
+
+    private static byte[] ClientDataToJson(ClientData clientData) throws JsonProcessingException {
         ObjectWriter ow = new ObjectMapper().writer();
         String json = ow.writeValueAsString(clientData);
-        return json;
+        byte[] result = json.getBytes(StandardCharsets.UTF_8);
+        return result;
     }
 
     private static ClientData OptionsToClientData(PublicKeyCredentialCreationOptions options) {
         ClientData result = new ClientData();
         result.challenge = options.challenge;
-        result.origin = options.rp.id;
+        result.origin = "https://" + options.rp.id;
         result.type = "webauthn.create";
         return result;
     }
 
-    private static PublicKeyCredentialCreationOptions GenerateOptions() {
+    private static PublicKeyCredentialCreationOptions GenerateOptions() throws UnsupportedEncodingException {
         PublicKeyCredentialCreationOptions result = new PublicKeyCredentialCreationOptions();
         result.rp = GenerateOptionsRp();
         result.user = GenerateOptionsUser();
-        result.challenge = com.google.common.io.BaseEncoding.base64Url().encode(hexStringToByteArray("F234917AD286DF19DE11A8C47DE77FBE611BF54EDB5D9DB2AC172FCAD963F9C2"));
+        result.challenge = base64UrlEncode(hexStringToByteArray("F234917AD286DF19DE11A8C47DE77FBE611BF54EDB5D9DB2AC172FCAD963F9C2"));
         result.pubKeyCredParams = GenerateOptionsPubKeyCredParams();
         result.timeout = 60000;
         result.attestation = "direct";
@@ -223,8 +298,7 @@ public class AttestationTest extends AsyncTask<Void, String, Void> {
         int len = s.length();
         byte[] data = new byte[len / 2];
         for (int i = 0; i < len; i += 2) {
-            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
-                    + Character.digit(s.charAt(i + 1), 16));
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4) + Character.digit(s.charAt(i + 1), 16));
         }
         return data;
     }
@@ -241,6 +315,11 @@ public class AttestationTest extends AsyncTask<Void, String, Void> {
         return new String(hexChars);
     }
 
+    private static String base64UrlEncode(byte[] input) throws UnsupportedEncodingException {
+        String result = new String(Base64.encode(input, Base64.URL_SAFE | Base64.NO_PADDING | Base64.NO_CLOSE | Base64.NO_WRAP), StandardCharsets.UTF_8).trim();
+        return result;
+    }
+
     private byte[] mergeByteArrays(byte[]... arguments) {
         byte[] finalbytearr = new byte[0];
         for (int i = 0; i < arguments.length; ++i) {
@@ -254,14 +333,5 @@ public class AttestationTest extends AsyncTask<Void, String, Void> {
         }
 
         return finalbytearr;
-    }
-
-    private KeyPair makeNewKeyPair(String algorithm, KeyGenParameterSpec spec)
-            throws NoSuchAlgorithmException, NoSuchProviderException,
-            InvalidAlgorithmParameterException {
-        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(algorithm,
-                "AndroidKeyStore");
-        keyPairGenerator.initialize(spec);
-        return keyPairGenerator.generateKeyPair();
     }
 }

@@ -1,5 +1,8 @@
 package com.google.attestationexample;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -25,10 +28,18 @@ public class AttestationActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        FloatingActionButton fabCopy = (FloatingActionButton) findViewById(R.id.fabCopy);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                doIt();
+                createAndroidKeyResponse();
+            }
+        });
+
+        fabCopy.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                copy();
             }
         });
 
@@ -36,7 +47,7 @@ public class AttestationActivity extends AppCompatActivity {
         PACKAGE_NAME = getApplicationContext().getPackageName();
     }
 
-    private void doIt() {
+    private void createAndroidKeyResponse() {
         TextView textView = (TextView) findViewById(R.id.textview);
         textView.setText("");
         try {
@@ -44,6 +55,14 @@ public class AttestationActivity extends AppCompatActivity {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void copy() {
+        TextView textView = (TextView) findViewById(R.id.textview);
+        String text = textView.getText().toString();
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText("Copied Text", text);
+        clipboard.setPrimaryClip(clip);
     }
 
     @Override
