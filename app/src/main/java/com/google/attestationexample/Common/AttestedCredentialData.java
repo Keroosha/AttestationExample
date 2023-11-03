@@ -1,13 +1,23 @@
-package com.google.attestationexample.Registration.Internal;
+package com.google.attestationexample.Common;
 
-import java.io.IOException;
+import com.google.attestationexample.WebAuthnUtils;
+
+import java.security.PublicKey;
 
 public class AttestedCredentialData {
     public byte[] aaguid;
     public byte[] credentialId;
     public CredentialPublicKeyEcdsa credentialPublicKey;
 
-    public byte[] toByteArray() throws IOException {
+    public static AttestedCredentialData create(byte[] credentialId, PublicKey publicKey){
+        AttestedCredentialData result = new AttestedCredentialData();
+        result.aaguid = new byte[]{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        result.credentialId = credentialId;
+        result.credentialPublicKey = CredentialPublicKeyEcdsa.create(publicKey);
+        return result;
+    }
+
+    public byte[] toByteArray() {
         byte[] credentialPublicKeyBytes = credentialPublicKey.toByteArray();
         byte[] result = new byte[aaguid.length + 2 + credentialId.length + credentialPublicKeyBytes.length];
         int idx = 0;
@@ -15,7 +25,7 @@ public class AttestedCredentialData {
             result[idx] = aaguid[i];
         }
 
-        byte[] credentialIdLength = BE_convert2Bytes(credentialId.length);
+        byte[] credentialIdLength = WebAuthnUtils.toUint16BigEndian(credentialId.length);
         for (int i = 0; i < credentialIdLength.length; i++, idx++) {
             result[idx] = credentialIdLength[i];
         }
@@ -27,12 +37,5 @@ public class AttestedCredentialData {
             result[idx] = credentialPublicKeyBytes[i];
         }
         return result;
-    }
-
-    private static byte[] BE_convert2Bytes(int src) {
-        byte tgt[] = new byte[2];
-        tgt[0] = (byte) (src >>> 8);
-        tgt[1] = (byte) (src & 0xff);
-        return tgt;
     }
 }

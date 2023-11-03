@@ -10,7 +10,10 @@ public final class Constants {
 
     public static final byte[] AttestationChallenge = Hex.decode("F234917AD286DF19DE11A8C47DE77FBE611BF54EDB5D9DB2AC172FCAD963F9C2");
     public static final byte[] AssertionChallenge = Hex.decode("9A6F3E2B7B091FA698D1BC662D1408568EB94CA0E13E23C3F3ADAC3AFC76DEC9");
+
+    public static final byte[] UserHandle = Hex.decode("00000000000000000000000000000001");
     public static final String  rpId = "vanbukin-pc.local";
+    public static final String  origin = "https://vanbukin-pc.local";
 
     public static final class CoseAlg {
         public static final int RS1 = -65535;

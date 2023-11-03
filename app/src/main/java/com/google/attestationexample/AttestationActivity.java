@@ -49,7 +49,7 @@ public class AttestationActivity extends AppCompatActivity {
         TextView textView = (TextView) findViewById(R.id.textview);
         textView.setText("");
         try {
-            new AssertionTest(textView, PACKAGE_NAME).execute();
+            new AssertionTest(textView).execute();
         } catch (Exception e) {
             e.printStackTrace();
         }
