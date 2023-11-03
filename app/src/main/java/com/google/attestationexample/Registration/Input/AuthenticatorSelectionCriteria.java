@@ -1,4 +1,4 @@
-package com.google.attestationexample.Registration.Options;
+package com.google.attestationexample.Registration.Input;
 
 public class AuthenticatorSelectionCriteria {
     public String authenticatorAttachment;
