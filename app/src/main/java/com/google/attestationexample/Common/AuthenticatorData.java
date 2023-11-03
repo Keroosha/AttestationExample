@@ -69,8 +69,6 @@ public class AuthenticatorData {
 
         flags = (byte) (flags | FLAG_UP);
         flags = (byte) (flags | FLAG_UV);
-        flags = (byte) (flags | FLAG_AT);
-
         result.flags = flags;
         result.signCount = 0x00;
         result.attestedCredentialData = null;

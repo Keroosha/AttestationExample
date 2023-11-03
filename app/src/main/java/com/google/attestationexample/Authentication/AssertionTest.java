@@ -16,9 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.Signature;
-import java.security.cert.Certificate;
 import java.util.UUID;
 
 public class AssertionTest extends AsyncTask<Void, String, Void> {
@@ -72,7 +70,7 @@ public class AssertionTest extends AsyncTask<Void, String, Void> {
         String keyUUID = UUID.fromString(Constants.keyUUID).toString();
         KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
         keyStore.load(null);
-        PrivateKey privateKey = (PrivateKey) keyStore.getKey(keyUUID, null);;
+        PrivateKey privateKey = (PrivateKey) keyStore.getKey(keyUUID, null);
         byte[] credentialId = keyUUID.getBytes(StandardCharsets.UTF_8);
         AuthenticatorData authenticatorData = AuthenticatorData.create(options.rpId);
         byte[] authData = authenticatorData.toByteArray();
