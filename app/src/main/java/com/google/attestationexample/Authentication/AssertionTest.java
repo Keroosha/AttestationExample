@@ -72,11 +72,9 @@ public class AssertionTest extends AsyncTask<Void, String, Void> {
         String keyUUID = UUID.fromString(Constants.keyUUID).toString();
         KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
         keyStore.load(null);
-        PrivateKey privateKey = (PrivateKey) keyStore.getKey(keyUUID, null);
-        Certificate certificate = keyStore.getCertificate(keyUUID);
-        PublicKey publicKey = certificate.getPublicKey();
+        PrivateKey privateKey = (PrivateKey) keyStore.getKey(keyUUID, null);;
         byte[] credentialId = keyUUID.getBytes(StandardCharsets.UTF_8);
-        AuthenticatorData authenticatorData = AuthenticatorData.create(options.rpId, credentialId, publicKey);
+        AuthenticatorData authenticatorData = AuthenticatorData.create(options.rpId);
         byte[] authData = authenticatorData.toByteArray();
         Signature signer = Signature.getInstance("SHA256WithECDSA");
         byte[] dataToSign = WebAuthnUtils.mergeByteArrays(authData, clientDataHash);
